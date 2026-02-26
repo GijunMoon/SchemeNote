@@ -32,13 +32,12 @@
 #### 2. 스키마 시각화 (Schema Visualization)
 
 * **실시간 관계 도식**: 노드 간의 보충, 근거, 반대 관계를 베지어 곡선과 화살표로 시각화합니다.
-* **인터랙티브 캔버스**: 마우스 휠로 줌인/줌아웃하고, 노드를 직접 드래그하여 배치할 수 있습니다. 노드들이 서로 밀어내고 당기는 물리 기반 애니메이션을 통해 최적의 배치를 자동으로 찾아갑니다.
+* **인터랙티브 캔버스**: 마우스 휠로 줌인/줌아웃하고, 노드를 직접 드래그하여 배치할 수 있습니다.
 * **미니맵 지원**: 구조가 거대해져도 우측 하단 미니맵을 통해 현재 위치를 놓치지 않습니다.
 
 #### 3. 상세 속성 편집
 
 * **노드 타입 지정**: 개념(Concept), 주장(Claim), 근거(Evidence) 등 성격에 맞는 타입을 지정하고 그에 맞는 색상과 모양으로 구분합니다.
-* **마크다운 스타일 콘텐츠**: 각 노드에 상세 내용을 기록하고 저장할 수 있습니다.
 
 ---
 
@@ -48,4 +47,3 @@
 * **Framework**: .NET 8 / WPF (Windows Presentation Foundation)
 * **Architecture**: MVVM 패턴 (CommunityToolkit.Mvvm 사용)
 * **Database**: SQLite & Entity Framework Core (로컬 저장소)
-* **Visualization**: Custom Canvas with Bezier Curves & Physics Simulation
