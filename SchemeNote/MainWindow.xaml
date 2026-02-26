@@ -6,11 +6,9 @@
         Title="SchemeNote: Logic Structure Designer"
         Height="800" Width="1300"
         WindowStartupLocation="CenterScreen">
-
     <Window.DataContext>
         <vm:MainViewModel/>
     </Window.DataContext>
-
     <!-- 기존 컨버터 + 고급 캔버스용 컨버터 추가 -->
     <Window.Resources>
         <conv:HexToBrushConverter x:Key="HexToBrushConverter"/>
@@ -18,7 +16,6 @@
         <conv:TypeToVisibilityConverter x:Key="TypeToVisibilityConverter"/>
         <conv:PointToMarginConverter x:Key="PointToMarginConverter"/>
     </Window.Resources>
-
     <Grid Background="#F5F7FA">
         <Grid.ColumnDefinitions>
             <!-- 좌측: 주제 목록 -->
@@ -28,7 +25,6 @@
             <!-- 우측: 상세 속성 및 스키마 관계 -->
             <ColumnDefinition Width="420"/>
         </Grid.ColumnDefinitions>
-
         <!-- LEFT : Subject 영역 -->
         <Border Grid.Column="0" Background="White" BorderBrush="#E1E4E8" BorderThickness="0,0,1,0">
             <Grid Margin="15">
@@ -38,15 +34,12 @@
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-
                 <TextBlock Grid.Row="0" Text="📁 Subjects (프로젝트)" FontWeight="Bold" FontSize="14" Margin="0,0,0,15" Foreground="#2C3E50"/>
                 <Button Grid.Row="1" Content="+ Add Subject" Command="{Binding AddSubjectCommand}" Margin="0,0,0,10" Padding="5" Background="White" BorderBrush="#CBD5E1"/>
-
-                <ListBox Grid.Row="2" ItemsSource="{Binding Subjects}" 
-                         SelectedItem="{Binding SelectedSubject}" 
+                <ListBox Grid.Row="2" ItemsSource="{Binding Subjects}"
+                         SelectedItem="{Binding SelectedSubject}"
                          DisplayMemberPath="Name"
                          BorderThickness="1" BorderBrush="#E1E4E8" MinHeight="300"/>
-
                 <!-- 선택된 Subject 이름 수정 및 삭제 영역 -->
                 <StackPanel Grid.Row="3" Margin="0,15,0,0" Visibility="{Binding SelectedSubject, Converter={StaticResource NullToVisibilityConverter}}">
                     <TextBlock Text="Edit Project Info" FontWeight="SemiBold" FontSize="12" Foreground="#64748B" Margin="0,0,0,5"/>
@@ -63,7 +56,6 @@
                 </StackPanel>
             </Grid>
         </Border>
-
         <!-- CENTER : Node Tree 영역 -->
         <Border Grid.Column="1" Background="Transparent">
             <Grid Margin="15">
@@ -71,16 +63,13 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-
                 <TextBlock Grid.Row="0" Text="🕸️ Structure (논리 구조)" FontWeight="Bold" FontSize="14" Margin="0,0,0,15" Foreground="#2C3E50"/>
-
                 <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,15">
                     <Button Content="Add Root" Command="{Binding AddRootNodeCommand}" Margin="0,0,5,0" Padding="10,5" Background="White"/>
                     <Button Content="Add Child" Command="{Binding AddChildNodeCommand}" Margin="0,0,5,0" Padding="10,5" Background="White"/>
                 </StackPanel>
-
-                <TreeView Grid.Row="1" 
-                          ItemsSource="{Binding RootNodes}" 
+                <TreeView Grid.Row="1"
+                          ItemsSource="{Binding RootNodes}"
                           SelectedItemChanged="TreeView_SelectedItemChanged"
                           BorderThickness="1" BorderBrush="#E1E4E8" Padding="10" Background="White"
                           PreviewMouseLeftButtonDown="TreeView_PreviewMouseLeftButtonDown"
@@ -105,40 +94,31 @@
                 </TreeView>
             </Grid>
         </Border>
-
         <!-- RIGHT : Node Properties & Relations 영역 -->
         <Border Grid.Column="2" Background="White" BorderBrush="#E1E4E8" BorderThickness="1,0,0,0">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="15" Visibility="{Binding SelectedNode, Converter={StaticResource NullToVisibilityConverter}}">
-
                     <!-- 속성 (Properties) -->
                     <TextBlock Text="📄 Node Properties" FontWeight="Bold" FontSize="14" Margin="0,0,0,15" Foreground="#2C3E50"/>
-
                     <TextBlock Text="Title (제목)" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,5"/>
                     <TextBox Text="{Binding SelectedNode.Title, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,15" Padding="5"/>
-
                     <TextBlock Text="Type (속성)" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,5"/>
-                    <ComboBox ItemsSource="{Binding NodeTypes}" 
-                              DisplayMemberPath="Name" 
-                              SelectedItem="{Binding SelectedNode.NodeType}" 
+                    <ComboBox ItemsSource="{Binding NodeTypes}"
+                              DisplayMemberPath="Name"
+                              SelectedItem="{Binding SelectedNode.NodeType}"
                               Margin="0,0,0,15" Padding="5"/>
-
                     <TextBlock Text="Content (상세 내용)" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,5"/>
-                    <TextBox Text="{Binding SelectedNode.Content, UpdateSourceTrigger=PropertyChanged}" 
+                    <TextBox Text="{Binding SelectedNode.Content, UpdateSourceTrigger=PropertyChanged}"
                              Height="80" AcceptsReturn="True" TextWrapping="Wrap" Margin="0,0,0,10" Padding="5"/>
-
                     <Button Content="Save Content &amp; Title" Command="{Binding SaveNodeChangesCommand}" Padding="5" Margin="0,0,0,20" Background="#3B82F6" Foreground="White" BorderThickness="0"/>
-
                     <Separator Margin="0,0,0,20"/>
-
-                    <!-- ★ 변경됨: 스키마 관계 연결 도식화 (고급 Canvas Visualization 이식) ★ -->
+                    <!-- 스키마 관계 연결 도식화 -->
                     <Grid Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="👁️ Schema Visualization" FontWeight="Bold" FontSize="14" Foreground="#2C3E50" VerticalAlignment="Center"/>
-
                         <!-- 릴레이션 필터 뷰 -->
                         <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                             <RadioButton Content="All" IsChecked="{Binding CurrentFilter, ConverterParameter=All}" Command="{Binding CurrentFilterChangedCommand}" CommandParameter="All" Margin="0,0,8,0" FontSize="11"/>
@@ -146,14 +126,12 @@
                             <RadioButton Content="Oppose" IsChecked="{Binding CurrentFilter, ConverterParameter=Oppose}" Command="{Binding CurrentFilterChangedCommand}" CommandParameter="Oppose" FontSize="11"/>
                         </StackPanel>
                     </Grid>
-
-                    <!-- ScrollViewer와 줌 충돌을 막기 위해 PreviewMouseWheel 사용 -->
+                    <!-- PreviewMouseWheel -->
                     <Border Background="#FAFAFA" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" Height="300" Margin="0,0,0,15" ClipToBounds="True"
-                            PreviewMouseWheel="GraphCanvas_MouseWheel" 
+                            PreviewMouseWheel="GraphCanvas_MouseWheel"
                             MouseLeftButtonDown="GraphCanvas_MouseLeftButtonDown"
                             MouseLeftButtonUp="GraphCanvas_MouseLeftButtonUp"
                             MouseMove="GraphCanvas_MouseMove">
-
                         <Grid>
                             <!-- 고급 무한 캔버스 -->
                             <Canvas x:Name="MainGraphCanvas" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -163,7 +141,6 @@
                                         <TranslateTransform x:Name="CanvasTranslate" X="0" Y="0"/>
                                     </TransformGroup>
                                 </Canvas.RenderTransform>
-
                                 <!-- 베지어 곡선 및 화살표 렌더링 -->
                                 <ItemsControl ItemsSource="{Binding VisualEdges}">
                                     <ItemsControl.ItemsPanel>
@@ -174,15 +151,14 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <Canvas>
-                                                <Path Data="{Binding PathData}" Stroke="{Binding StrokeBrush}" 
-                                                      StrokeThickness="{Binding StrokeThickness}" 
+                                                <Path Data="{Binding PathData}" Stroke="{Binding StrokeBrush}"
+                                                      StrokeThickness="{Binding StrokeThickness}"
                                                       StrokeDashArray="{Binding StrokeDashArray}"/>
                                                 <Polygon Points="{Binding ArrowPoints}" Fill="{Binding StrokeBrush}"/>
                                             </Canvas>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
-
                                 <!-- 노드 형태 렌더링 -->
                                 <ItemsControl ItemsSource="{Binding VisualNodes}">
                                     <ItemsControl.ItemsPanel>
@@ -209,24 +185,21 @@
                                                 <Grid.InputBindings>
                                                     <MouseBinding Gesture="LeftDoubleClick" Command="{Binding DataContext.SelectGraphNodeCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding Node}"/>
                                                 </Grid.InputBindings>
-
                                                 <!-- 1. Concept: 타원 -->
-                                                <Ellipse Width="{Binding NodeSize}" Height="{Binding NodeSize}" 
+                                                <Ellipse Width="{Binding NodeSize}" Height="{Binding NodeSize}"
                                                          Fill="{Binding Node.NodeType.ColorCode, Converter={StaticResource HexToBrushConverter}}"
                                                          Visibility="{Binding Node.NodeType.Name, Converter={StaticResource TypeToVisibilityConverter}, ConverterParameter='Concept'}"/>
                                                 <!-- 2. Claim: 직사각형 -->
-                                                <Rectangle Width="{Binding NodeSize}" Height="{Binding NodeSize}" 
+                                                <Rectangle Width="{Binding NodeSize}" Height="{Binding NodeSize}"
                                                            Fill="{Binding Node.NodeType.ColorCode, Converter={StaticResource HexToBrushConverter}}"
                                                            Visibility="{Binding Node.NodeType.Name, Converter={StaticResource TypeToVisibilityConverter}, ConverterParameter='Claim'}"/>
                                                 <!-- 3. Evidence: 둥근 모서리 -->
                                                 <Border Width="{Binding NodeSize}" Height="{Binding NodeSize}" CornerRadius="15"
                                                         Background="{Binding Node.NodeType.ColorCode, Converter={StaticResource HexToBrushConverter}}"
                                                         Visibility="{Binding Node.NodeType.Name, Converter={StaticResource TypeToVisibilityConverter}, ConverterParameter='Evidence'}"/>
-
                                                 <!-- 텍스트 -->
-                                                <TextBlock Text="{Binding Node.Title}" TextWrapping="Wrap" TextAlignment="Center" 
+                                                <TextBlock Text="{Binding Node.Title}" TextWrapping="Wrap" TextAlignment="Center"
                                                            VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="White" FontWeight="Bold" FontSize="11" Padding="5"/>
-
                                                 <!-- 호버 이펙트 -->
                                                 <Border Background="#33FFFFFF" Visibility="{Binding IsHovered, Converter={StaticResource NullToVisibilityConverter}}" CornerRadius="10"/>
                                             </Grid>
@@ -234,9 +207,8 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                             </Canvas>
-
                             <!-- 캔버스 미니맵 (크기를 줄여서 우측 하단 배치) -->
-                            <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" 
+                            <Border HorizontalAlignment="Right" VerticalAlignment="Bottom"
                                     Width="80" Height="80" Background="#EEFFFFFF" BorderBrush="#AAAAAA" BorderThickness="1" Margin="10"
                                     IsHitTestVisible="False">
                                 <Rectangle Margin="2">
@@ -247,12 +219,11 @@
                             </Border>
                         </Grid>
                     </Border>
-
                     <!-- 스키마 관계 연결 폼 -->
                     <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,0,15">
                         <StackPanel>
                             <TextBlock Text="새 관계 추가하기" FontSize="12" Foreground="#64748B" Margin="0,0,0,5"/>
-                            <ComboBox ItemsSource="{Binding AvailableTargetNodes}" 
+                            <ComboBox ItemsSource="{Binding AvailableTargetNodes}"
                                       SelectedItem="{Binding TargetRelationNode}"
                                       DisplayMemberPath="Title"
                                       Margin="0,0,0,5" Padding="4" ToolTip="연결할 대상 노드 선택"/>
@@ -261,14 +232,13 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="60"/>
                                 </Grid.ColumnDefinitions>
-                                <ComboBox Grid.Column="0" ItemsSource="{Binding RelationTypes}" 
+                                <ComboBox Grid.Column="0" ItemsSource="{Binding RelationTypes}"
                                           SelectedItem="{Binding SelectedRelationType}"
                                           DisplayMemberPath="Name" Margin="0,0,5,0" Padding="4" ToolTip="관계 종류 선택 (보충, 반대 등)"/>
                                 <Button Grid.Column="1" Content="Link" Command="{Binding AddRelationCommand}" Background="#10B981" Foreground="White" BorderThickness="0"/>
                             </Grid>
                         </StackPanel>
                     </Border>
-
                     <!-- 리스트 형식으로 지우기 기능 제공 -->
                     <ItemsControl ItemsSource="{Binding DisplayRelations}">
                         <ItemsControl.ItemTemplate>
@@ -282,8 +252,8 @@
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="{Binding TypeName}" Foreground="#3B82F6" FontWeight="SemiBold" FontSize="11" Margin="0,0,5,0" VerticalAlignment="Center"/>
                                         <TextBlock Grid.Column="1" Text="{Binding TargetNodeTitle}" TextTrimming="CharacterEllipsis" FontSize="12" VerticalAlignment="Center"/>
-                                        <Button Grid.Column="2" Content="X" 
-                                                Command="{Binding DataContext.DeleteRelationCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" 
+                                        <Button Grid.Column="2" Content="X"
+                                                Command="{Binding DataContext.DeleteRelationCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                 CommandParameter="{Binding RelationEntity}"
                                                 Background="Transparent" Foreground="#EF4444" BorderThickness="0" Padding="5,0"/>
                                     </Grid>
@@ -294,6 +264,5 @@
                 </StackPanel>
             </ScrollViewer>
         </Border>
-
     </Grid>
 </Window>

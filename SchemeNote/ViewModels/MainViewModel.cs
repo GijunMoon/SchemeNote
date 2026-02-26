@@ -28,15 +28,13 @@ namespace SchemeNote.ViewModels
 
         [ObservableProperty] private double x;
         [ObservableProperty] private double y;
-        [ObservableProperty] private int depth; // N-Depth 표현용
+        [ObservableProperty] private int depth;
         [ObservableProperty] private double nodeSize = 100;
         [ObservableProperty] private bool isHovered;
 
-        // 물리 엔진용 변수
-        public double vx, vy;
         public bool IsDragged = false;
 
-        public void UpdateSize() => NodeSize = Math.Max(60, 120 - (Depth * 20));
+        public void UpdateSize() => NodeSize = Math.Max(70, 130 - (Depth * 15));
     }
 
     public partial class VisualEdge : ObservableObject
@@ -44,54 +42,42 @@ namespace SchemeNote.ViewModels
         public Relation Relation { get; set; }
         public VisualNode Source { get; set; }
         public VisualNode Target { get; set; }
-        public string EdgeType => Relation.RelationType?.Name ?? "";
 
-        [ObservableProperty] private string pathData = "";
-        [ObservableProperty] private PointCollection arrowPoints = new();
+        [ObservableProperty] private Geometry? pathData;
+        [ObservableProperty] private PointCollection? arrowPoints;
         [ObservableProperty] private Brush strokeBrush = Brushes.Gray;
         [ObservableProperty] private double strokeThickness = 2;
-        [ObservableProperty] private DoubleCollection? strokeDashArray = null;
+        [ObservableProperty] private DoubleCollection? strokeDashArray;
 
-        public void UpdateGeometry()
+        public void UpdatePath()
         {
-            if (EdgeType.Equals("Support", StringComparison.OrdinalIgnoreCase) || EdgeType.Contains("보충"))
-            {
-                StrokeBrush = Brushes.DodgerBlue;
-                StrokeThickness = 3;
-                StrokeDashArray = null;
-            }
-            else if (EdgeType.Equals("Oppose", StringComparison.OrdinalIgnoreCase) || EdgeType.Contains("반대"))
-            {
-                StrokeBrush = Brushes.Crimson;
-                StrokeThickness = 2;
-                StrokeDashArray = new DoubleCollection { 4, 4 };
-            }
+            if (Source == null || Target == null) return;
 
-            double dx = Target.X - Source.X;
-            double dy = Target.Y - Source.Y;
-            double dist = Math.Sqrt(dx * dx + dy * dy);
+            // 베지어 곡선 계산
+            var start = new Point(Source.X, Source.Y);
+            var end = new Point(Target.X, Target.Y);
+            double midX = (start.X + end.X) / 2;
+            var cp1 = new Point(midX, start.Y);
+            var cp2 = new Point(midX, end.Y);
+            var figure = new PathFigure { StartPoint = start, IsClosed = false };
+            figure.Segments.Add(new BezierSegment(cp1, cp2, end, true));
+            var geometry = new PathGeometry();
+            geometry.Figures.Add(figure);
+            PathData = geometry;
 
-            if (dist == 0) return; // 0으로 나누기 방지
+            UpdateArrow(start, end);
+        }
 
-            double r1 = Source.NodeSize / 2;
-            double r2 = Target.NodeSize / 2 + 10;
-
-            double startX = Source.X + (dx / dist) * r1;
-            double startY = Source.Y + (dy / dist) * r1;
-            double endX = Target.X - (dx / dist) * r2;
-            double endY = Target.Y - (dy / dist) * r2;
-
-            double cx = (startX + endX) / 2 - dy * 0.2;
-            double cy = (startY + endY) / 2 + dx * 0.2;
-
-            PathData = $"M {startX:F1},{startY:F1} Q {cx:F1},{cy:F1} {endX:F1},{endY:F1}";
-
-            double angle = Math.Atan2(endY - cy, endX - cx);
-            Point p1 = new Point(endX, endY);
-            Point p2 = new Point(endX - 15 * Math.Cos(angle - Math.PI / 6), endY - 15 * Math.Sin(angle - Math.PI / 6));
-            Point p3 = new Point(endX - 15 * Math.Cos(angle + Math.PI / 6), endY - 15 * Math.Sin(angle + Math.PI / 6));
-
-            ArrowPoints = new PointCollection { p1, p2, p3 };
+        private void UpdateArrow(Point start, Point end)
+        {
+            double angle = Math.Atan2(end.Y - start.Y, end.X - start.X);
+            double arrowLength = 12;
+            double arrowAngle = Math.PI / 6;
+            var points = new PointCollection();
+            points.Add(end);
+            points.Add(new Point(end.X - arrowLength * Math.Cos(angle - arrowAngle), end.Y - arrowLength * Math.Sin(angle - arrowAngle)));
+            points.Add(new Point(end.X - arrowLength * Math.Cos(angle + arrowAngle), end.Y - arrowLength * Math.Sin(angle + arrowAngle)));
+            ArrowPoints = points;
         }
     }
 
@@ -100,44 +86,38 @@ namespace SchemeNote.ViewModels
     public partial class MainViewModel : ObservableObject
     {
         private readonly AppDbContext _context;
+        private readonly Random _rnd = new();
 
         public ObservableCollection<Subject> Subjects { get; set; } = new();
         public ObservableCollection<Node> RootNodes { get; set; } = new();
         public ObservableCollection<NodeType> NodeTypes { get; set; } = new();
-
         public ObservableCollection<RelationType> RelationTypes { get; set; } = new();
         public ObservableCollection<Node> AvailableTargetNodes { get; set; } = new();
         public ObservableCollection<RelationDisplayModel> DisplayRelations { get; set; } = new();
-
         public ObservableCollection<VisualNode> VisualNodes { get; set; } = new();
         public ObservableCollection<VisualEdge> VisualEdges { get; set; } = new();
 
-        [ObservableProperty] private Subject? _selectedSubject;
-        [ObservableProperty] private Node? _selectedNode;
-        [ObservableProperty] private RelationType? _selectedRelationType;
-        [ObservableProperty] private Node? _targetRelationNode;
+        [ObservableProperty] private Subject? selectedSubject;
+        [ObservableProperty] private Node? selectedNode;
+        [ObservableProperty] private RelationType? selectedRelationType;
+        [ObservableProperty] private Node? targetRelationNode;
         [ObservableProperty] private RelationFilter currentFilter = RelationFilter.All;
 
         partial void OnCurrentFilterChanged(RelationFilter value) => UpdateGraphVisualization();
 
-        private DispatcherTimer _physicsTimer;
-        private Random _rnd = new Random();
-
         public MainViewModel()
         {
             _context = new AppDbContext();
-            _context.Database.EnsureCreated(); // 배포시 고려
+            _context.Database.EnsureCreated();
+            LoadInitialData();
+        }
 
-            SeedNodeTypes();
-            SeedRelationTypes();
-
+        private void LoadInitialData()
+        {
+            SeedDataIfEmpty();
             LoadSubjects();
             LoadNodeTypes();
             LoadRelationTypes();
-
-            _physicsTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
-            _physicsTimer.Tick += PhysicsLoop;
-            _physicsTimer.Start();
         }
 
         [RelayCommand]
@@ -153,159 +133,127 @@ namespace SchemeNote.ViewModels
             UpdateGraphVisualization();
         }
 
-        // 2. 구버전 UpdateGraphVisualization 삭제 및 신버전 하나로 통일
         public void UpdateGraphVisualization()
         {
             VisualNodes.Clear();
             VisualEdges.Clear();
-
             if (SelectedNode == null) return;
 
-            int maxDepth = 3;
-            var queue = new Queue<(Node node, int depth)>();
             var visited = new Dictionary<Guid, VisualNode>();
-            var edgesSet = new HashSet<Guid>();
+            var queue = new Queue<(Node node, int depth)>();
 
+            // 중심 노드 설정
             var centerVNode = new VisualNode { Node = SelectedNode, X = 0, Y = 0, Depth = 0 };
             centerVNode.UpdateSize();
             visited[SelectedNode.Id] = centerVNode;
             queue.Enqueue((SelectedNode, 0));
 
+            double baseRadius = 400.0; // 반경 증가로 노드 간 거리 확대 (겹침 방지)
+
             while (queue.Count > 0)
             {
-                var current = queue.Dequeue();
-                if (current.depth >= maxDepth) continue;
+                var (currentNode, currentDepth) = queue.Dequeue();
+                if (currentDepth >= 3) continue; // 최대 3단계까지만 표시
 
+                // 현재 노드와 연결된 모든 관계 가져오기
                 var relations = _context.Relations
                     .Include(r => r.RelationType)
-                    .Where(r => r.FromNodeId == current.node.Id || r.ToNodeId == current.node.Id)
+                    .Where(r => r.FromNodeId == currentNode.Id || r.ToNodeId == currentNode.Id)
                     .ToList();
 
+                // 필터링 적용
                 if (CurrentFilter == RelationFilter.Support)
                     relations = relations.Where(r => r.RelationType?.Name.Contains("Support") == true || r.RelationType?.Name.Contains("보충") == true).ToList();
                 else if (CurrentFilter == RelationFilter.Oppose)
                     relations = relations.Where(r => r.RelationType?.Name.Contains("Oppose") == true || r.RelationType?.Name.Contains("반대") == true).ToList();
 
+                double angleStep = 2 * Math.PI / Math.Max(1, relations.Count);
+                int index = 0;
+
                 foreach (var rel in relations)
                 {
-                    bool isOutgoing = rel.FromNodeId == current.node.Id;
-                    Guid targetNodeId = isOutgoing ? rel.ToNodeId : rel.FromNodeId;
+                    Guid targetId = (rel.FromNodeId == currentNode.Id) ? rel.ToNodeId : rel.FromNodeId;
 
-                    if (!visited.ContainsKey(targetNodeId))
+                    if (!visited.ContainsKey(targetId))
                     {
-                        var targetNode = _context.Nodes.Include(n => n.NodeType).FirstOrDefault(n => n.Id == targetNodeId);
+                        var targetNode = _context.Nodes.Include(n => n.NodeType).FirstOrDefault(n => n.Id == targetId);
                         if (targetNode != null)
                         {
+                            double angle = index * angleStep + _rnd.NextDouble() * 0.5; // 랜덤 오프셋으로 겹침 방지
                             var vNode = new VisualNode
                             {
                                 Node = targetNode,
-                                Depth = current.depth + 1,
-                                X = current.depth * 50 * (Math.Cos(_rnd.NextDouble() * Math.PI * 2)),
-                                Y = current.depth * 50 * (Math.Sin(_rnd.NextDouble() * Math.PI * 2))
+                                Depth = currentDepth + 1,
+                                X = baseRadius * (currentDepth + 1) * Math.Cos(angle),
+                                Y = baseRadius * (currentDepth + 1) * Math.Sin(angle)
                             };
                             vNode.UpdateSize();
-                            visited[targetNodeId] = vNode;
-                            queue.Enqueue((targetNode, current.depth + 1));
+                            visited[targetId] = vNode;
+                            queue.Enqueue((targetNode, currentDepth + 1));
+                            index++;
                         }
                     }
 
-                    if (!edgesSet.Contains(rel.Id) && visited.ContainsKey(rel.FromNodeId) && visited.ContainsKey(rel.ToNodeId))
+                    // 엣지 추가 (중복 방지)
+                    if (visited.ContainsKey(rel.FromNodeId) && visited.ContainsKey(rel.ToNodeId))
                     {
-                        edgesSet.Add(rel.Id);
-                        VisualEdges.Add(new VisualEdge
+                        if (!VisualEdges.Any(e => e.Relation.Id == rel.Id))
                         {
-                            Relation = rel,
-                            Source = visited[rel.FromNodeId],
-                            Target = visited[rel.ToNodeId]
-                        });
+                            var edge = new VisualEdge
+                            {
+                                Relation = rel,
+                                Source = visited[rel.FromNodeId],
+                                Target = visited[rel.ToNodeId],
+                                StrokeBrush = (rel.RelationType?.Name.Contains("Oppose") == true || rel.RelationType?.Name.Contains("반대") == true) ? Brushes.Crimson : Brushes.DodgerBlue,
+                                StrokeDashArray = (rel.RelationType?.Name.Contains("Oppose") == true || rel.RelationType?.Name.Contains("반대") == true) ? new DoubleCollection { 4, 4 } : null // Oppose에 점선 추가
+                            };
+                            edge.UpdatePath(); // 추가 전에 UpdatePath 호출 (초기 경로 설정)
+                            VisualEdges.Add(edge);
+                        }
                     }
                 }
             }
 
             foreach (var vn in visited.Values) VisualNodes.Add(vn);
-            foreach (var ve in VisualEdges) ve.UpdateGeometry();
-
-            centerVNode.IsDragged = true;
-            centerVNode.X = 0; centerVNode.Y = 0;
         }
 
-        private void PhysicsLoop(object sender, EventArgs e)
+        public void UpdateNodePosition(VisualNode vNode, double deltaX, double deltaY)
         {
-            if (VisualNodes.Count <= 1) return;
+            vNode.X += deltaX;
+            vNode.Y += deltaY;
 
-            double k = 150.0;
-            double damp = 0.85;
-
-            for (int i = 0; i < VisualNodes.Count; i++)
+            // 이동된 노드와 연결된 모든 선 갱신
+            var relatedEdges = VisualEdges.Where(e => e.Source == vNode || e.Target == vNode);
+            foreach (var edge in relatedEdges)
             {
-                for (int j = i + 1; j < VisualNodes.Count; j++)
-                {
-                    var n1 = VisualNodes[i];
-                    var n2 = VisualNodes[j];
-                    double dx = n1.X - n2.X;
-                    double dy = n1.Y - n2.Y;
-                    double distSq = dx * dx + dy * dy;
-                    if (distSq == 0) { dx = _rnd.NextDouble(); dy = _rnd.NextDouble(); distSq = dx * dx + dy * dy; }
-
-                    double force = (k * k) / distSq;
-                    double fx = force * dx;
-                    double fy = force * dy;
-
-                    n1.vx += fx; n1.vy += fy;
-                    n2.vx -= fx; n2.vy -= fy;
-                }
+                edge.UpdatePath();
             }
-
-            foreach (var edge in VisualEdges)
-            {
-                double dx = edge.Target.X - edge.Source.X;
-                double dy = edge.Target.Y - edge.Source.Y;
-                double dist = Math.Sqrt(dx * dx + dy * dy);
-                if (dist == 0) dist = 0.1;
-
-                double force = (dist * dist) / k * 0.05;
-                double fx = force * (dx / dist);
-                double fy = force * (dy / dist);
-
-                edge.Source.vx += fx; edge.Source.vy += fy;
-                edge.Target.vx -= fx; edge.Target.vy -= fy;
-            }
-
-            foreach (var node in VisualNodes)
-            {
-                if (!node.IsDragged)
-                {
-                    node.X += node.vx * 0.05;
-                    node.Y += node.vy * 0.05;
-                }
-                node.vx *= damp;
-                node.vy *= damp;
-            }
-
-            foreach (var edge in VisualEdges) edge.UpdateGeometry();
         }
 
-        private void SeedNodeTypes()
+        private void SeedDataIfEmpty()
         {
-            if (_context.NodeTypes.Any()) return;
+            if (!_context.NodeTypes.Any())
+            {
+                _context.NodeTypes.AddRange(
+                    new NodeType { Name = "Concept", ColorCode = "#4A90E2" },
+                    new NodeType { Name = "Evidence", ColorCode = "#27AE60" },
+                    new NodeType { Name = "Claim", ColorCode = "#E74C3C" }
+                );
+            }
 
-            _context.NodeTypes.AddRange(
-                new NodeType { Name = "Concept", ColorCode = "#4A90E2" },
-                new NodeType { Name = "Evidence", ColorCode = "#27AE60" },
-                new NodeType { Name = "Claim", ColorCode = "#E74C3C" }
-            );
-            _context.SaveChanges();
-        }
+            if (!_context.RelationTypes.Any())
+            {
+                _context.RelationTypes.AddRange(
+                    new RelationType { Name = "보충 (Support)", Description = "뒷받침" },
+                    new RelationType { Name = "반대 (Oppose)", Description = "반박" },
+                    new RelationType { Name = "Type of", Description = "도형관계" }, // 이미지 기반 추가
+                    new RelationType { Name = "Instance of", Description = "개체관계" },
+                    new RelationType { Name = "Part of", Description = "부분 관계" },
+                    new RelationType { Name = "Cause-Effect", Description = "인과 관계" },
+                    new RelationType { Name = "Data-Claim", Description = "논증 관계" }
+                );
+            }
 
-        private void SeedRelationTypes()
-        {
-            if (_context.RelationTypes.Any()) return;
-
-            _context.RelationTypes.AddRange(
-                new RelationType { Name = "보충 (Support)", Description = "주장이나 개념을 뒷받침합니다." },
-                new RelationType { Name = "반대 (Oppose)", Description = "주장에 반박합니다." },
-                new RelationType { Name = "제약 (Constraint)", Description = "조건이나 제약을 추가합니다." }
-            );
             _context.SaveChanges();
         }
 
